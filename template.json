@@ -1,0 +1,101 @@
+{
+"AWSTemplateFormatVersion": "2010-09-09",
+"Transform": "AWS::Serverless-2016-10-31",
+"Description": "A Serverless applictation to log file details in DynamoDB",
+"Parameters": {
+    "DynamoDBTableName": {
+        "Type": "String",
+        "Default": "pwc-filelogtable",
+        "Description": "Enter the table name for the dynamoDBTable. Default is target-dynamo-table."
+    },
+    "S3BucketName": {
+        "Type": "String",
+        "Default": "pwc-logfilesource",
+        "Description": "Enter bucket name as source for dynamodb"
+    }
+},
+"Resources": {
+    "SourceBucket":{
+        "Type": "AWS::S3::Bucket",
+        "Properties":{
+            "BucketName":{
+                "Fn::Sub": "${S3BucketName}"
+            }
+        }
+    },
+    "TargetDynamoTable": {
+        "Type": "AWS::DynamoDB::Table",
+        "Properties": {
+            "AttributeDefinitions": [
+                {
+                    "AttributeName": "TimeStamp",
+                    "AttributeType": "S"
+                }
+            ],
+            "KeySchema": [
+                {
+                    "AttributeName": "TimeStamp",
+                    "KeyType": "HASH"
+                }
+            ],
+            "ProvisionedThroughput": {
+                "ReadCapacityUnits": "1",
+                "WriteCapacityUnits": "1"
+            },
+            "TableName": {
+                "Fn::Sub": "${DynamoDBTableName}"
+            }
+        }
+    },
+    "S3ToDynamoDB": {
+        "Type": "AWS::Serverless::Function",
+					"Properties": {
+						"Handler": "S3ToDynamo::S3Parse.StartupProgram::ProcessS3Events",
+						"Runtime": "dotnetcore2.0",
+						"CodeUri": "src/S3ToDynamoDB/bin/Debug/netcoreapp2.0/publish",
+						"MemorySize": 1024,
+						"FunctionName": {
+							"Fn::Sub": "${AWS::StackName}_S3ToDynamoDB"
+						},
+						"Description": "This lambda function will log the filenames from S3 in a DynamoDB table",
+						"Timeout": 300,
+						"Environment": {
+							"Variables": {
+								"DynamoDBTableName": {
+									"Fn::Sub": "${DynamoDBTableName}"
+								}
+							}
+						},
+						"Tags": {
+							"Project": "SAM Repository",
+							"CreatedBy": "turjac591"
+						},
+						"Events": {
+							"S3TriggerEvent": {
+								"Type": "S3",
+								"Properties": {
+									"Bucket": { "Ref": "SourceBucket" },
+									"Events": [ "s3:ObjectCreated:*" ]
+								}
+							}
+						},
+						"Policies": [
+					{
+						"DynamoDBCrudPolicy": {
+							"TableName": {
+                "Ref": "DynamoDBTableName"
+            }
+						}
+					},
+					{
+						"DynamoDBReadPolicy": {
+							"TableName": {
+                "Ref": "DynamoDBTableName"
+            }
+						}
+					}
+				]
+					}
+    }
+}
+}
