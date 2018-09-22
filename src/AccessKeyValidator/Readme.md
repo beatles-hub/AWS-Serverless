@@ -1,45 +1,23 @@
-# AWS Lambda Empty Function Project
+# Serverles App for Validating AccessKeys
 
-This starter project consists of:
-* Function.cs - class file containing a class with a single function handler method
-* aws-lambda-tools-defaults.json - default argument settings for use with Visual Studio and command line deployment tools for AWS
+This is a serverless app developed on c# using AWS SDK for .NET V3
 
-You may also have a test project depending on the options selected.
+##What does it do?
 
-The generated function handler is a simple method accepting a string argument that returns the uppercase equivalent of the input string. Replace the body of this method, and parameters, to suit your needs.
+It is a serverless app which exposes an API endpoint backed by a Lambda function written in c#. You can pass any 
+AccessKeyID to the API and it will let you know whether that AccessKeyID is a ValidAcessKey or not in your account. If
+the accesskey is valid , then it will also return some metadata about the accesskey in the response like whether it is
+active or not , when was it last used , which user it is associated to and so on.
 
-## Here are some steps to follow from Visual Studio:
+##How to get started quickly. 
 
-To deploy your function to AWS Lambda, right click the project in Solution Explorer and select *Publish to AWS Lambda*.
+This app uses the AWS SAM template . So , you can simply clone the code , and get started using a few basic commands
 
-To view your deployed function open its Function View window by double-clicking the function name shown beneath the AWS Lambda node in the AWS Explorer tree.
-
-To perform testing against your deployed function use the Test Invoke tab in the opened Function View window.
-
-To configure event sources for your deployed function, for example to have your function invoked when an object is created in an Amazon S3 bucket, use the Event Sources tab in the opened Function View window.
-
-To update the runtime configuration of your deployed function use the Configuration tab in the opened Function View window.
-
-To view execution logs of invocations of your function use the Logs tab in the opened Function View window.
-
-## Here are some steps to follow to get started from the command line:
-
-Once you have edited your function you can use the following command lines to build, test and deploy your function to AWS Lambda from the command line (these examples assume the project name is *EmptyFunction*):
-
-Restore dependencies
-```
-    cd "sam-app"
-    dotnet restore
-```
-
-Execute unit tests
-```
-    cd "sam-app/test/sam-app.Tests"
-    dotnet test
-```
-
-Deploy function to AWS Lambda
-```
-    cd "sam-app/src/sam-app"
-    dotnet lambda deploy-function
-```
+* Create a bucket to store the packaged code .
+aws s3 mb s3://[put your bucket name here] --region [put your region here] --profile [put your profile here]
+* This will validate the template for you
+sam validate --template template.json --profile [put your profile here]
+* This will package the code and push it to the bucket 
+sam package --profile [put your profile here] --template-file template.json --output-template-file serverless-output.yaml --s3-bucket [put your bucket name here] --force-upload
+* This will create a Cloudformation stack and deploy all resources to your AWS Account
+sam deploy --profile [put your profile here] --template-file serverless-output.yaml --stack-name [put your CF stack name here] --capabilities CAPABILITY_IAM --region [put your region here]
