@@ -1,6 +1,46 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: An AWS Serverless Application to validate AccessKey using API
+Parameters:
+  APIDeployStage:
+    AllowedValues:
+    - DEV
+    - Sandbox
+    - UAT
+    - PROD
+    Default: DEV
+    Description: Enter the API Gateway Stage. Default is DEV.
+    Type: String
 Resources:
+  AccessKeyValidatorApi:
+    Properties:
+      DefinitionBody:
+        info:
+          title: AccessKeyValidatorApi
+          version: 1.0.0
+        paths:
+          /ValidateAccessKey:
+            post:
+              responses: {}
+              security:
+              - sigv4: []
+              x-amazon-apigateway-integration:
+                httpMethod: POST
+                passthroughBehavior: when_no_match
+                type: aws_proxy
+                uri:
+                  Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ValidateAWSAccessKey.Arn}/invocations
+        securityDefinitions:
+          sigv4:
+            in: header
+            name: Authorization
+            type: apiKey
+            x-amazon-apigateway-authtype: awsSigv4
+        swagger: '2.0'
+      EndpointConfiguration: REGIONAL
+      Name: AccessKeyValidatorApi
+      StageName:
+        Ref: APIDeployStage
+    Type: AWS::Serverless::Api
   IAMLambdaExecutionPolicy:
     DependsOn:
     - IAMLambdaExecutionRole
@@ -43,7 +83,7 @@ Resources:
     DependsOn:
     - IAMLambdaExecutionRole
     Properties:
-      CodeUri: s3://access-key-validator/ed197127d219f982fcfa56c93a99eb7f
+      CodeUri: s3://access-key-validator/bb2b2ab895d738ac162958dcb4326f23
       Description: This lambda function will generate a validate an input access key
         against an AWS Account
       Events:
@@ -51,6 +91,8 @@ Resources:
           Properties:
             Method: POST
             Path: /ValidateAccessKey
+            RestApiId:
+              Ref: AccessKeyValidatorApi
           Type: Api
       FunctionName:
         Fn::Sub: ${AWS::StackName}_ValidateAWSAccessKey

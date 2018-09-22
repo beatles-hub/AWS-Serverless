@@ -16,7 +16,7 @@
     "function-handler"     : "AccessKeyValidator::AccessKeyValidator.StartupProgram::ValidateAccessKey",
     "function-name"        : "access-key-validator-stack_ValidateAWSAccessKey",
     "function-description" : "This lambda function will generate a validate an input access key against an AWS Account",
-    "function-role"        : "arn:aws:iam::551250655555:role/access-key-validator-stack-IAMLambdaExecutionRole-1HXA41WM4BN13",
+    "function-role"        : "arn:aws:iam::551250655555:role/access-key-validator-stack-IAMLambdaExecutionRole-1Q1KD99KU0RFL",
     "tracing-mode"         : "PassThrough",
     "environment-variables" : ""
 }

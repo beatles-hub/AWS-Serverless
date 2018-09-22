@@ -1,89 +1,167 @@
-{
-  "AWSTemplateFormatVersion" : "2010-09-09",
-  "Transform" : "AWS::Serverless-2016-10-31",
-  "Description" : "An AWS Serverless Application to validate AccessKey using API",
-  "Resources" : {
-     "IAMLambdaExecutionRole": {
-					"Type": "AWS::IAM::Role",
-					"Properties": {
-						"AssumeRolePolicyDocument": {
-							"Version": "2012-10-17",
-							"Statement": [{
-								"Effect": "Allow",
-								"Principal": {
-									"Service": ["lambda.amazonaws.com"]
-								},
-								"Action": ["sts:AssumeRole"]
-							}]
-						},
-						"Path": "/"
-					}
-				},
-	 "IAMLambdaExecutionPolicy": {
-					"DependsOn": ["IAMLambdaExecutionRole"],					
-					"Type": "AWS::IAM::Policy",
-					"Properties": {
-						"PolicyName": "IAMLambdaExecutionPolicyDocument",
-						"Roles": [{
-							"Ref": "IAMLambdaExecutionRole"
-						}],
-						"PolicyDocument": {
-							"Version": "2012-10-17",
-													"Statement": [														
-														{
-															"Sid": "CloudwatchLogGroupAccess",
-															"Action": [
-																"logs:CreateLogGroup",
-																"logs:CreateLogStream",
-																"logs:PutLogEvents"
-															],
-															"Effect": "Allow",
-															"Resource": "*"
-														},
-														{
-															"Sid": "IAMPermissions",
-															"Action": [
-																"iam:ListAccessKeys",
-																"iam:GetAccessKeyLastUsed",
-																"iam:ListUsers"
-															],
-															"Effect": "Allow",
-															"Resource": "*"
-														}
-													]
-						}
-					}
-				},	  
-	 "ValidateAWSAccessKey" : {
-      "Type" : "AWS::Serverless::Function",
-	  "DependsOn": ["IAMLambdaExecutionRole"],
-				"Properties": {
-					"Handler": "AccessKeyValidator::AccessKeyValidator.StartupProgram::ValidateAccessKey",
-					"Runtime": "dotnetcore2.0",
-					"CodeUri": "",
-					"MemorySize": 1024,
-									"FunctionName": {
-										"Fn::Sub": "${AWS::StackName}_ValidateAWSAccessKey"
-									},
-					"Description": "This lambda function will generate a validate an input access key against an AWS Account",
-					"Timeout": 300,
-					"Role": {
-						"Fn::GetAtt": [ "IAMLambdaExecutionRole", "Arn" ]
-					},
-					"Tags": {
-						"Project": "Access Key Validator",
-						"CreatedBy": "turja chaudhuri"
-					},
-					"Events": {
-						"PutResource": {
-							"Type": "Api",
-							"Properties": {
-								"Path": "/ValidateAccessKey",
-								"Method": "POST"
-							}
-						}
-					}
-				}
-    }
-  }
+{  
+   "AWSTemplateFormatVersion":"2010-09-09",
+   "Transform":"AWS::Serverless-2016-10-31",
+   "Description":"An AWS Serverless Application to validate AccessKey using API",
+   "Parameters":{  
+      "APIDeployStage":{  
+         "Type":"String",
+         "Default":"DEV",
+         "AllowedValues":[  
+            "DEV",
+            "Sandbox",
+            "UAT",
+            "PROD"
+         ],
+         "Description":"Enter the API Gateway Stage. Default is DEV."
+      }
+   },
+   "Resources":{  
+      "IAMLambdaExecutionRole":{  
+         "Type":"AWS::IAM::Role",
+         "Properties":{  
+            "AssumeRolePolicyDocument":{  
+               "Version":"2012-10-17",
+               "Statement":[  
+                  {  
+                     "Effect":"Allow",
+                     "Principal":{  
+                        "Service":[  
+                           "lambda.amazonaws.com"
+                        ]
+                     },
+                     "Action":[  
+                        "sts:AssumeRole"
+                     ]
+                  }
+               ]
+            },
+            "Path":"/"
+         }
+      },
+      "IAMLambdaExecutionPolicy":{  
+         "DependsOn":[  
+            "IAMLambdaExecutionRole"
+         ],
+         "Type":"AWS::IAM::Policy",
+         "Properties":{  
+            "PolicyName":"IAMLambdaExecutionPolicyDocument",
+            "Roles":[  
+               {  
+                  "Ref":"IAMLambdaExecutionRole"
+               }
+            ],
+            "PolicyDocument":{  
+               "Version":"2012-10-17",
+               "Statement":[  
+                  {  
+                     "Sid":"CloudwatchLogGroupAccess",
+                     "Action":[  
+                        "logs:CreateLogGroup",
+                        "logs:CreateLogStream",
+                        "logs:PutLogEvents"
+                     ],
+                     "Effect":"Allow",
+                     "Resource":"*"
+                  },
+                  {  
+                     "Sid":"IAMPermissions",
+                     "Action":[  
+                        "iam:ListAccessKeys",
+                        "iam:GetAccessKeyLastUsed",
+                        "iam:ListUsers"
+                     ],
+                     "Effect":"Allow",
+                     "Resource":"*"
+                  }
+               ]
+            }
+         }
+      },
+      "ValidateAWSAccessKey":{  
+         "Type":"AWS::Serverless::Function",
+         "DependsOn":[  
+            "IAMLambdaExecutionRole"
+         ],
+         "Properties":{  
+            "Handler":"AccessKeyValidator::AccessKeyValidator.StartupProgram::ValidateAccessKey",
+            "Runtime":"dotnetcore2.0",
+            "CodeUri":"",
+            "MemorySize":1024,
+            "FunctionName":{  
+               "Fn::Sub":"${AWS::StackName}_ValidateAWSAccessKey"
+            },
+            "Description":"This lambda function will generate a validate an input access key against an AWS Account",
+            "Timeout":300,
+            "Role":{  
+               "Fn::GetAtt":[  
+                  "IAMLambdaExecutionRole",
+                  "Arn"
+               ]
+            },
+            "Tags":{  
+               "Project":"Access Key Validator",
+               "CreatedBy":"turja chaudhuri"
+            },
+            "Events":{  
+               "PutResource":{  
+                  "Type":"Api",
+                  "Properties":{  
+                     "Path":"/ValidateAccessKey",
+                     "Method":"POST",
+                     "RestApiId":{  
+                        "Ref":"AccessKeyValidatorApi"
+                     }
+                  }
+               }
+            }
+         }
+      },
+      "AccessKeyValidatorApi":{  
+         "Type":"AWS::Serverless::Api",
+         "Properties":{  
+            "StageName":{  
+               "Ref":"APIDeployStage"
+            },
+            "Name":"AccessKeyValidatorApi",
+            "EndpointConfiguration":"REGIONAL",
+            "DefinitionBody":{  
+               "swagger":"2.0",
+               "info":{  
+                  "title":"AccessKeyValidatorApi",
+                  "version":"1.0.0"
+               },
+               "securityDefinitions":{  
+                  "sigv4":{  
+                     "type":"apiKey",
+                     "name":"Authorization",
+                     "in":"header",
+                     "x-amazon-apigateway-authtype":"awsSigv4"
+                  }
+               },
+               "paths":{  
+                  "/ValidateAccessKey":{  
+                     "post":{  
+                        "responses":{  
+
+                        },
+                        "security":[  
+                           {  
+                              "sigv4":[]
+                           }
+                        ],
+                        "x-amazon-apigateway-integration":{  
+                           "uri":{  
+                              "Fn::Sub":"arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ValidateAWSAccessKey.Arn}/invocations"
+                           },
+                           "httpMethod":"POST",
+                           "type":"aws_proxy",
+                           "passthroughBehavior":"when_no_match"
+                        }
+                     }
+                  }
+               }
+            }
+         }
+      }
+   }
 }
