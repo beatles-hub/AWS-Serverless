@@ -15,7 +15,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\HelloWorld\AccessKeyValidator.csproj" />
+    <ProjectReference Include="..\..\src\AccessKeyValidator\AccessKeyValidator.csproj" />
   </ItemGroup>
 
 </Project>

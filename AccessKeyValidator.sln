@@ -20,9 +20,9 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "build", "build", "{68DF9E4E
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{6DB7C3C2-84DC-4DD5-A070-8E3F186E184F}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AccessKeyValidator", "src\HelloWorld\AccessKeyValidator.csproj", "{9F62886F-73E6-4CBC-9A90-48BA8B56F13B}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AccessKeyValidator", "src\AccessKeyValidator\AccessKeyValidator.csproj", "{9F62886F-73E6-4CBC-9A90-48BA8B56F13B}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AccessKeyValidator.Tests", "test\HelloWorld.Test\AccessKeyValidator.Tests.csproj", "{6B28DD0E-5B35-4F5A-943A-2C80953B7B3F}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AccessKeyValidator.Tests", "test\AccessKeyValidator.Test\AccessKeyValidator.Tests.csproj", "{6B28DD0E-5B35-4F5A-943A-2C80953B7B3F}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

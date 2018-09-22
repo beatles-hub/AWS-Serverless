@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using Newtonsoft.Json;
-
 using Amazon.Lambda.Core;
 using Amazon.Lambda.APIGatewayEvents;
 using Amazon.IdentityManagement;
@@ -13,6 +12,8 @@ using AccessKeyValidator.HelperClasses;
 using Amazon.IdentityManagement.Model;
 using AccessKeyValidator.Model;
 using System.Net;
+using Amazon.Runtime.CredentialManagement;
+using Amazon.Runtime;
 
 // Assembly attribute to enable the Lambda function's JSON input to be converted into a .NET class.
 [assembly: LambdaSerializer(typeof(Amazon.Lambda.Serialization.Json.JsonSerializer))]
@@ -39,10 +40,15 @@ namespace AccessKeyValidator
         private void Setup()
         {
             if (isLocalDebug)
-            {
-                Amazon.Runtime.AWSCredentials credentials = new
-                                            Amazon.Runtime.StoredProfileAWSCredentials(Constants.AWSProfileName);
-                iamClient = new AmazonIdentityManagementServiceClient(credentials, Amazon.RegionEndpoint.APSouth1);
+            {         
+                var chain = new CredentialProfileStoreChain();
+                AWSCredentials awsCredentials;
+                if (chain.TryGetAWSCredentials(Constants.AWSProfileName, out awsCredentials))
+                {
+                    // use awsCredentials
+                    iamClient = new AmazonIdentityManagementServiceClient(
+                                        awsCredentials, Amazon.RegionEndpoint.APSouth1);
+                }               
             }
             else
             {
@@ -50,35 +56,38 @@ namespace AccessKeyValidator
             }
         }
 
-        private ListUsersResponse ListAllUsers()
+        private void ListAccessKeys(string userName, int maxItems, 
+                                    List<Model.AccessKeyMetadata> AccessKeyMetadataList)
         {
-            var requestUsers = new ListUsersRequest();
-            var responseUsers = iamClient.ListUsersAsync(requestUsers).GetAwaiter().GetResult();
-
-            return responseUsers;
-        }
-
-        private void ListAccessKeys(string userName, int maxItems, List<Model.AccessKeyMetadata> AccessKeyMetadataList)
-        {
-            var requestAccessKeys = new ListAccessKeysRequest
+            ListAccessKeysResponse accessKeysResponse = new ListAccessKeysResponse();
+            var accessKeysRequest = new ListAccessKeysRequest
             {
                 // Use the user created in the CreateAccessKey example
                 UserName = userName,
                 MaxItems = maxItems
             };
-            var responseAccessKeys = iamClient.ListAccessKeysAsync(requestAccessKeys).GetAwaiter().GetResult();
-
-            Model.AccessKeyMetadata accesskeymetadata = new Model.AccessKeyMetadata();
-
-            foreach (var accessKey in responseAccessKeys.AccessKeyMetadata)
+            do
             {
-                accesskeymetadata.AccessKeyId = accessKey.AccessKeyId;
-                accesskeymetadata.CreateDate = accessKey.CreateDate;
-                accesskeymetadata.Status = accessKey.Status;
-                accesskeymetadata.UserName = accessKey.UserName;
+                accessKeysResponse = iamClient.ListAccessKeysAsync(accessKeysRequest).GetAwaiter().GetResult();
+                foreach (var accessKey in accessKeysResponse.AccessKeyMetadata)
+                {
+                    Model.AccessKeyMetadata accesskeymetadata = new Model.AccessKeyMetadata();
+                    accesskeymetadata.AccessKeyId = accessKey.AccessKeyId;
+                    accesskeymetadata.CreateDate = accessKey.CreateDate.ToLongDateString();
+                    accesskeymetadata.Status = accessKey.Status;
+                    accesskeymetadata.UserName = accessKey.UserName;
 
-                AccessKeyMetadataList.Add(accesskeymetadata);
-            }
+                    GetAccessKeyLastUsedRequest request = new GetAccessKeyLastUsedRequest()
+                                        { AccessKeyId = accessKey.AccessKeyId };
+
+                    GetAccessKeyLastUsedResponse response = 
+                                            iamClient.GetAccessKeyLastUsedAsync(request).GetAwaiter().GetResult();
+
+                    accesskeymetadata.LastUsedDate = response.AccessKeyLastUsed.LastUsedDate.ToLongDateString();
+                    AccessKeyMetadataList.Add(accesskeymetadata);
+                }
+                accessKeysRequest.Marker = accessKeysResponse.Marker;
+            } while (accessKeysResponse.IsTruncated);
         }
 
         public APIGatewayProxyResponse ValidateAccessKey(APIGatewayProxyRequest request,
@@ -133,13 +142,16 @@ namespace AccessKeyValidator
                     }
                     else
                     {
-                        ListUsersResponse allUsersList = ListAllUsers();
+                        ListUsersResponse allUsersListResponse = new ListUsersResponse();
                         List<Model.AccessKeyMetadata> AccessKeyMetadataList = new List<Model.AccessKeyMetadata>();
 
-                        foreach (var user in allUsersList.Users)
+                        var userRequest = new ListUsersRequest { MaxItems = 20 } ;
+                        do
                         {
-                            ListAccessKeys(user.UserName, 10, AccessKeyMetadataList);
-                        }
+                            allUsersListResponse = iamClient.ListUsersAsync(userRequest).GetAwaiter().GetResult();
+                            ProcessUserDetails(allUsersListResponse, AccessKeyMetadataList);
+                            userRequest.Marker = allUsersListResponse.Marker;
+                        } while (allUsersListResponse.IsTruncated);                       
 
                         Model.AccessKeyMetadata validAcessDetails =
                             AccessKeyMetadataList.Where(x => x.AccessKeyId == requestObj.AccessKeyID).FirstOrDefault();
@@ -181,6 +193,15 @@ namespace AccessKeyValidator
                 };
             }
             return response;
+        }
+
+        private void ProcessUserDetails(ListUsersResponse allUsersListResponse, 
+                                        List<Model.AccessKeyMetadata> accessKeyMetadataList)
+        {
+            foreach (var user in allUsersListResponse.Users)
+            {
+                ListAccessKeys(user.UserName, 20, accessKeyMetadataList);
+            }
         }
     }
 }

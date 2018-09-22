@@ -10,10 +10,12 @@ namespace AccessKeyValidator.Model
         [JsonIgnore]
         public string AccessKeyId { get; set; }
         [JsonProperty]
-        public DateTime CreateDate{get;set;}
+        public string CreateDate{get;set;}
         [JsonProperty]
         public string Status { get; set; }
         [JsonProperty]
         public string UserName { get; set; }
+        [JsonProperty]
+        public string LastUsedDate { get; set; }
     }
 }
