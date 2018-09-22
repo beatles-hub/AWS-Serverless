@@ -1,0 +1,69 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: An AWS Serverless Application to validate AccessKey using API
+Resources:
+  IAMLambdaExecutionPolicy:
+    DependsOn:
+    - IAMLambdaExecutionRole
+    Properties:
+      PolicyDocument:
+        Statement:
+        - Action:
+          - logs:CreateLogGroup
+          - logs:CreateLogStream
+          - logs:PutLogEvents
+          Effect: Allow
+          Resource: '*'
+          Sid: CloudwatchLogGroupAccess
+        - Action:
+          - iam:ListAccessKeys
+          - iam:GetAccessKeyLastUsed
+          - iam:ListUsers
+          Effect: Allow
+          Resource: '*'
+          Sid: IAMPermissions
+        Version: '2012-10-17'
+      PolicyName: IAMLambdaExecutionPolicyDocument
+      Roles:
+      - Ref: IAMLambdaExecutionRole
+    Type: AWS::IAM::Policy
+  IAMLambdaExecutionRole:
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Action:
+          - sts:AssumeRole
+          Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+        Version: '2012-10-17'
+      Path: /
+    Type: AWS::IAM::Role
+  ValidateAWSAccessKey:
+    DependsOn:
+    - IAMLambdaExecutionRole
+    Properties:
+      CodeUri: s3://access-key-validator/ed197127d219f982fcfa56c93a99eb7f
+      Description: This lambda function will generate a validate an input access key
+        against an AWS Account
+      Events:
+        PutResource:
+          Properties:
+            Method: POST
+            Path: /ValidateAccessKey
+          Type: Api
+      FunctionName:
+        Fn::Sub: ${AWS::StackName}_ValidateAWSAccessKey
+      Handler: AccessKeyValidator::AccessKeyValidator.StartupProgram::ValidateAccessKey
+      MemorySize: 1024
+      Role:
+        Fn::GetAtt:
+        - IAMLambdaExecutionRole
+        - Arn
+      Runtime: dotnetcore2.0
+      Tags:
+        CreatedBy: turja chaudhuri
+        Project: Access Key Validator
+      Timeout: 300
+    Type: AWS::Serverless::Function
+Transform: AWS::Serverless-2016-10-31
