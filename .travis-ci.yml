@@ -1,0 +1,26 @@
+language: csharp
+mono: none
+dotnet: 2.0
+solution: S3ToDynamo.sln
+branches:
+  only: SAMRepositoryApp1
+install:
+- pip install awscli
+- pip install aws-sam-cli
+- nuget restore S3ToDynamo.sln
+script:
+- dotnet restore
+- sam validate --template template.json
+- sam package --template-file template.json --s3-bucket aws-sam-test-1 --output-template-file serverless-output.yaml
+deploy:
+  provider: script
+  script: sam deploy --template-file packaged.yaml --stack-name travis-serverless-test
+  skip_cleanup: true
+  on:
+    branch: master
+notifications:
+  email:
+    on_failure: always
+env:
+  global:
+  - AWS_DEFAULT_REGION=ap-south-1
